@@ -67,8 +67,8 @@ void writeImage(PPMPixel *image, char *name, unsigned long int width, unsigned l
 /* Open the filename image for reading, and parse it.
     Example of a ppm header:    //http://netpbm.sourceforge.net/doc/ppm.html
     P6                  -- image format
-    # comment           -- comment lines begin with
-    ## another comment  -- any number of comment lines
+    \# comment           -- comment lines begin with
+    \#\# another comment  -- any number of comment lines
     200 300             -- image width & height
     255                 -- max color value
  
@@ -79,23 +79,59 @@ void writeImage(PPMPixel *image, char *name, unsigned long int width, unsigned l
  */
 PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned long int *height)
 {
-
-	PPMPixel *img;
-	
+    char buff[32];	
+    PPMPixel *img;
 
 	//read image format
+    FILE *fp;
+    int ch, rgb_colors;
+
+    fp = fopen(filename, "rb");
+
+    if(!fp) {
+        perror("Unable to open file");
+        exit(1);
+    }
+
+    if (!fgets(buff, sizeof(buff), fp)) {
+        perror("Error reading from file");
+        exit(1);
+    }
 
 	//check the image format by reading the first two characters in filename and compare them to P6.
-
+    if (buff[0] != 'P' || buff[1] != '6') {
+        perror("Not a P6 image");
+        exit(1);
+    } else {
+        printf("header: %s", buff);
+        printf("Correct file type\n");
+    }
 
 	//If there are comments in the file, skip them. You may assume that comments exist only in the header block.
-
+    ch = getc(fp);
+    while (ch == '#') {
+        while (getc(fp) != '\n');
+        ch = getc(fp);
+    }
+    ungetc(ch, fp);
 	
 	//read image size information
-	
+	if (fscanf(fp, "%ld %ld", width, height) != 2) {
+        printf("Instead read %ln %ln", width, height);
+        fprintf(stderr, "Error reading image size\n");
+        exit(1);
+    }
 
 	//Read rgb component. Check if it is equal to RGB_MAX. If  not, display error message.
-	
+    if (fscanf(fp, "%d", &rgb_colors) != 1) {
+        fprintf(stderr, "Error reading color depth");
+        exit(1);
+    } else {
+        if (rgb_colors != RGB_MAX) {
+            fprintf(stderr, "Not 255 colors");
+            exit(1);
+        }
+    }
     
     //allocate memory for img. NOTE: A ppm image of w=200 and h=300 will contain 60000 triplets (i.e. for r,g,b), ---> 180000 bytes.
 
@@ -136,7 +172,14 @@ int main(int argc, char *argv[])
 	//load the image into the buffer
     unsigned long int w, h;
     double elapsedTime = 0.0;
+    PPMPixel *image;
 
+    if (argc == 2) {
+        image = readImage(argv[1], &w, &h);
+    } else {
+        printf("Usage: imath <filename>.ppm\n");
+        exit(0);
+    }
 	
 	return 0;
 }

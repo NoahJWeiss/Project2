@@ -79,7 +79,7 @@ void writeImage(PPMPixel *image, char *name, unsigned long int width, unsigned l
  */
 PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned long int *height)
 {
-    char buff[32];	
+    char buff[32];
     PPMPixel *img;
 
 	//read image format
@@ -132,12 +132,43 @@ PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned lon
             exit(1);
         }
     }
+
+    while (fgetc(fp) != '\n');
     
     //allocate memory for img. NOTE: A ppm image of w=200 and h=300 will contain 60000 triplets (i.e. for r,g,b), ---> 180000 bytes.
+    img = (PPMPixel*) malloc(3 * *width * *height * sizeof(PPMPixel));
+
+    if (!img) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
 
     //read pixel data from filename into img. The pixel data is stored in scanline order from left to right (up to bottom) in 3-byte chunks (r g b values for each pixel) encoded as binary numbers.
+    if (fread(img, 3, *width * *height, fp) != *width * *height) {
+        fprintf(stderr, "Image read failed");
+        exit(1);
+    }
+
+    fclose(fp);    
+
+
 
 	return img;
+}
+
+void showPPM(PPMPixel *img)
+{
+    int i;
+    if(img){
+
+    for(i=-1;i<100;i++){
+        printf("Number: %d\n",i);
+        printf("R: %d ",img[i].r );
+        printf("G: %d ",img[i].g );
+        printf("B: %d\n ",img[i].b );
+
+     }
+}
 }
 
 /* Create threads and apply filter to image.
@@ -176,6 +207,8 @@ int main(int argc, char *argv[])
 
     if (argc == 2) {
         image = readImage(argv[1], &w, &h);
+
+        showPPM(image);
     } else {
         printf("Usage: imath <filename>.ppm\n");
         exit(0);

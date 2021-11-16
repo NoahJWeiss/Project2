@@ -44,13 +44,48 @@ void *threadfn(void *params)
 	  -1,  8, -1,
 	  -1, -1, -1,
 	};
-    printf("do it\n");
-
 	
+    struct parameter *instance = (struct parameter*) params;
+    printf("Start: %li\n", instance->start);
+    printf("Size: %li\n", instance->size);
+
     /*For all pixels in the work region of image (from start to start+size)
       Multiply every value of the filter with corresponding image pixel. Note: this is NOT matrix multiplication.
       Store the new values of r,g,b in p->result.
      */
+
+    for (long i = instance->start; i < instance->start + instance->size; i++) {
+        x_cord = i % instance->w;
+        y_cord = i / instance->w % instance->h;
+        red = (int) instance->image[i].r;
+        green = (int) instance->image[i].g;
+        blue = (int) instance->image[i].b;
+
+        int x_cord_trans;
+        int y_cord_trans;
+
+        printf("x, y: %i, %i\n", x_cord, y_cord);
+        printf("r, g, b: %i, %i, %i\n", red, green, blue);
+
+        printf("theoretical first red: %i\n", (int)instance->image[600*800].r);
+
+        for (int lapHeight = 0; lapHeight < filterHeight; lapHeight++) {
+            for (int lapWidth = 0; lapWidth < filterWidth; lapWidth++) {
+                x_cord_trans = (x_cord - filterWidth / 2 + lapWidth + instance->w)%instance->w;
+                y_cord_trans = (y_cord - filterHeight / 2 + lapHeight + instance->h)%instance->h;
+
+                red += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].r * laplacian[lapHeight][lapWidth];
+                green += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].g * laplacian[lapHeight][lapWidth];
+                blue += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].b * laplacian[lapHeight][lapWidth];
+                printf("red now: %i\n", red);
+            }
+        }
+
+        instance->result[i].r = (char) red;
+        instance->result[i].g = (char) green;
+        instance->result[i].b = (char) blue; 
+        printf("updated r, g, b: %i, %i, %i\n", red, green, blue);
+    }
 		
 	return NULL;
 }
@@ -183,21 +218,21 @@ void showPPM(PPMPixel *img)
  */
 PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, double *elapsedTime) {
     //Work = 600/125: 4.8 or 720/125: 5.76
-    int threadSize = 125;
     int totalPix = w * h;
-    int indWork = totalPix / threadSize;
+    printf("Total pixels: %i\n", totalPix);
+    int indWork = totalPix / THREADS;
     PPMPixel *result;
-    struct parameter *toThreads[threadSize];
-    pthread_t threads[threadSize];
+    struct parameter *toThreads[THREADS];
+    pthread_t threads[THREADS];
     //allocate memory for result
 
     result = (PPMPixel*) malloc(sizeof(PPMPixel) * w * h);
     printf("result allocated\n");
     
-    for(int i = 0;i < threadSize;i++){
+    for(int i = 0; i < THREADS; i++){
     //allocate memory for parameters (one for each thread)
         //Line needs work
-        toThreads[i] = (struct parameter*) malloc(sizeof(toThreads[i]));
+        toThreads[i] = (struct parameter*) malloc(sizeof(struct parameter));
     /*create threads and apply filter.
      For each thread, compute where to start its work.  Determine the size of the work. If the size is not even, the last thread shall take the rest of the work.
      */

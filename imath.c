@@ -33,6 +33,10 @@ struct parameter {
  */
 void *threadfn(void *params)
 {
+    //Vars to be added?
+
+    int x_cord, y_cord, red, green, blue;
+    ///////////////////
 	
 	int laplacian[filterWidth][filterHeight] =
 	{
@@ -40,6 +44,7 @@ void *threadfn(void *params)
 	  -1,  8, -1,
 	  -1, -1, -1,
 	};
+    printf("do it\n");
 
 	
     /*For all pixels in the work region of image (from start to start+size)
@@ -134,9 +139,9 @@ PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned lon
     }
 
     while (fgetc(fp) != '\n');
-    
+    printf("Height: %li\t Width: %li\n", *height, *width);
     //allocate memory for img. NOTE: A ppm image of w=200 and h=300 will contain 60000 triplets (i.e. for r,g,b), ---> 180000 bytes.
-    img = (PPMPixel*) malloc(3 * *width * *height * sizeof(PPMPixel));
+    img = (PPMPixel*) malloc( *width * *height * sizeof(PPMPixel)); //Removed the multiplier by 3
 
     if (!img) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -156,19 +161,19 @@ PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned lon
 	return img;
 }
 
-void showPPM(PPMPixel *image)
+void showPPM(PPMPixel *img)
 {
     int i;
+    if(img){
 
-    if (image) {
-        for(i=-1;i<100;i++){
-            printf("Number: %d\n",i);
-            printf("R: %d ",image[i].r );
-            printf("G: %d ",image[i].g );
-            printf("B: %d\n ",image[i].b );
+    for(i=-1;i<100;i++){
+        printf("Number: %d\n",i);
+        printf("R: %d ",img[i].r );
+        printf("G: %d ",img[i].g );
+        printf("B: %d\n ",img[i].b );
 
-        }
-    }
+     }
+}
 }
 
 /* Create threads and apply filter to image.
@@ -177,15 +182,42 @@ void showPPM(PPMPixel *image)
  Return: result (filtered image)
  */
 PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, double *elapsedTime) {
-
+    //Work = 600/125: 4.8 or 720/125: 5.76
+    int threadSize = 125;
+    int totalPix = w * h;
+    int indWork = totalPix / threadSize;
     PPMPixel *result;
+    struct parameter *toThreads[threadSize];
+    pthread_t threads[threadSize];
     //allocate memory for result
 
+    result = (PPMPixel*) malloc(sizeof(PPMPixel) * w * h);
+    printf("result allocated\n");
+    
+    for(int i = 0;i < threadSize;i++){
     //allocate memory for parameters (one for each thread)
-
+        //Line needs work
+        toThreads[i] = (struct parameter*) malloc(sizeof(toThreads[i]));
     /*create threads and apply filter.
      For each thread, compute where to start its work.  Determine the size of the work. If the size is not even, the last thread shall take the rest of the work.
      */
+        toThreads[i]->image = image;
+        toThreads[i]->result = result;
+        toThreads[i]->h = h;
+        toThreads[i]->w = w;
+        toThreads[i]->start = i * indWork;
+        toThreads[i]->size = indWork;
+        ///*
+        if(pthread_create(&threads[i], NULL, threadfn, (void*) toThreads[i]) != 0){
+            fprintf(stderr ,"error number at thread");
+            exit(1);
+        }
+        //*/
+       //pthread_create(&threads[i], NULL, threadfn, )
+
+   
+
+    }
    
 
    //Let threads wait till they all finish their work.
@@ -204,11 +236,12 @@ int main(int argc, char *argv[])
     unsigned long int w, h;
     double elapsedTime = 0.0;
     PPMPixel *image;
+    PPMPixel *result;
 
     if (argc == 2) {
         image = readImage(argv[1], &w, &h);
-
-        showPPM(image);
+        result = apply_filters(image, w, h, &elapsedTime); 
+        //showPPM(image);
     } else {
         printf("Usage: imath <filename>.ppm\n");
         exit(0);

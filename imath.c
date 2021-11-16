@@ -156,19 +156,19 @@ PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned lon
 	return img;
 }
 
-void showPPM(PPMPixel *img)
+void showPPM(PPMPixel *image)
 {
     int i;
-    if(img){
 
-    for(i=-1;i<100;i++){
-        printf("Number: %d\n",i);
-        printf("R: %d ",img[i].r );
-        printf("G: %d ",img[i].g );
-        printf("B: %d\n ",img[i].b );
+    if (image) {
+        for(i=-1;i<100;i++){
+            printf("Number: %d\n",i);
+            printf("R: %d ",image[i].r );
+            printf("G: %d ",image[i].g );
+            printf("B: %d\n ",image[i].b );
 
-     }
-}
+        }
+    }
 }
 
 /* Create threads and apply filter to image.

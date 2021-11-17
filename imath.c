@@ -81,6 +81,7 @@ void *threadfn(void *params)
             }
         }
 
+        // TODO: ensure rgb values between 0 and 255
         instance->result[i].r = (char) red;
         instance->result[i].g = (char) green;
         instance->result[i].b = (char) blue; 

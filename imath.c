@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <sys/time.h>
 #include <pthread.h>
 
@@ -41,13 +42,13 @@ void *threadfn(void *params)
 	int laplacian[filterWidth][filterHeight] =
 	{
 	  -1, -1, -1,
-	  -1,  8, -1,
+	  -1,  7, -1,
 	  -1, -1, -1,
 	};
 	
     struct parameter *instance = (struct parameter*) params;
-    printf("Start: %li\n", instance->start);
-    printf("Size: %li\n", instance->size);
+    // printf("Start: %li\n", instance->start);
+    // printf("Size: %li\n", instance->size);
 
     /*For all pixels in the work region of image (from start to start+size)
       Multiply every value of the filter with corresponding image pixel. Note: this is NOT matrix multiplication.
@@ -64,10 +65,10 @@ void *threadfn(void *params)
         int x_cord_trans;
         int y_cord_trans;
 
-        printf("x, y: %i, %i\n", x_cord, y_cord);
-        printf("r, g, b: %i, %i, %i\n", red, green, blue);
+        // printf("x, y: %i, %i\n", x_cord, y_cord);
+        // printf("r, g, b: %i, %i, %i\n", red, green, blue);
 
-        printf("theoretical first red: %i\n", (int)instance->image[600*800].r);
+        // printf("theoretical first red: %i\n", (int)instance->image[600*800].r);
 
         for (int lapHeight = 0; lapHeight < filterHeight; lapHeight++) {
             for (int lapWidth = 0; lapWidth < filterWidth; lapWidth++) {
@@ -77,15 +78,28 @@ void *threadfn(void *params)
                 red += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].r * laplacian[lapHeight][lapWidth];
                 green += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].g * laplacian[lapHeight][lapWidth];
                 blue += (int) instance->image[y_cord_trans * instance->w + x_cord_trans].b * laplacian[lapHeight][lapWidth];
-                printf("red now: %i\n", red);
+
+                // if(i == 1090) {
+                //     printf("blue[%li]: %i\n", i, blue);
+                // }
             }
         }
 
-        // TODO: ensure rgb values between 0 and 255
+        if (red > 255) {red = 255;}
+        else if (red < 0) {red = 0;}
+
+        if (green > 255) {green = 255;}
+        else if (green < 0) {green = 0;}
+
+        if (blue > 255) {blue = 255;}
+        else if (blue < 0) {blue = 0;}
+        
         instance->result[i].r = (char) red;
         instance->result[i].g = (char) green;
         instance->result[i].b = (char) blue; 
-        printf("updated r, g, b: %i, %i, %i\n", red, green, blue);
+        // if(i == 1090) {
+        //     printf("updated r, g, b: %i, %i, %i\n", red, green, blue);
+        // }
     }
 		
 	return NULL;
@@ -101,8 +115,24 @@ void *threadfn(void *params)
  */
 void writeImage(PPMPixel *image, char *name, unsigned long int width, unsigned long int height)
 {
+    FILE *fp;
 
+    fp = fopen(name, "wb");
+    if (!fp) {
+        printf("Unable to open file\n");
+        exit(1);
+    }
+
+    fprintf(fp, "P6\n");
+
+    fprintf(fp, "# Created by dvicklund\n");
+
+    fprintf(fp, "%ld %ld\n", width, height);
+
+    fprintf(fp, "%d\n", 255);
     
+    fwrite(image, 3*width, height, fp);
+    fclose(fp);
 }
 
 /* Open the filename image for reading, and parse it.
@@ -243,16 +273,16 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
         toThreads[i]->w = w;
         toThreads[i]->start = i * indWork;
         toThreads[i]->size = indWork;
-        ///*
-        if(pthread_create(&threads[i], NULL, threadfn, (void*) toThreads[i]) != 0){
+        
+        int thread = pthread_create(&threads[i], NULL, threadfn, (void*) toThreads[i]);
+        if(thread != 0){
             fprintf(stderr ,"error number at thread");
             exit(1);
         }
-        //*/
-       //pthread_create(&threads[i], NULL, threadfn, )
+    }
 
-   
-
+    for (int i = 0; i < THREADS; i++) {
+        pthread_join(threads[i], NULL);
     }
    
 
@@ -274,10 +304,21 @@ int main(int argc, char *argv[])
     PPMPixel *image;
     PPMPixel *result;
 
+    char infilename[40];
+    char outfilename[40];
+    char* infileSplit;
+
+    infileSplit = strtok(infilename, ".");
+
+    strcpy(infilename, argv[1]);
+    strcpy(outfilename, infilename);
+    strcat(outfilename, "_out");
+
     if (argc == 2) {
         image = readImage(argv[1], &w, &h);
         result = apply_filters(image, w, h, &elapsedTime); 
         //showPPM(image);
+        writeImage(result, "photos/test.ppm", w, h);
     } else {
         printf("Usage: imath <filename>.ppm\n");
         exit(0);

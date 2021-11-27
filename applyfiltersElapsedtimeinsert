@@ -1,0 +1,51 @@
+gettimeofday(&begin, NULL);
+
+    for(int i = 0;i < THREADS;i++){
+    //allocate memory for parameters (one for each thread)
+
+        toThreads[i] = (struct parameter*) malloc(sizeof(struct parameter));
+    /*create threads and apply filter.
+     For each thread, compute where to start its work.  Determine the size of the work. If the size is not even, the last thread shall take the rest of the work.
+     */
+        toThreads[i]->image = image;
+        toThreads[i]->result = result;
+        toThreads[i]->h = h;
+        toThreads[i]->w = w;
+        toThreads[i]->start = i * indWork;
+        toThreads[i]->size = indWork;
+        ///*
+        int thread = pthread_create(&threads[i], NULL, threadfn, (void*) toThreads[i]);
+        if(thread != 0){
+            fprintf(stderr ,"error number at thread");
+            exit(1);
+        }
+
+
+    }
+    for (int i = 0; i < THREADS; i++) {
+        //int error = 
+        pthread_join(threads[i], NULL);
+        //printf("Pjoin num: %i\n",error);
+    }
+
+   //Let threads wait till they all finish their work.
+    gettimeofday(&end, NULL);
+    //Microseconds conversion is 1 * 10^-6
+    *elapsedTime = difftime(end.tv_sec, begin.tv_sec) + ((double)(end.tv_usec - begin.tv_usec)/ 1000000);
+    /*
+    printf("Begin  time(s): %ld\t(ms): %ld\n", begin.tv_sec, begin.tv_usec);
+    printf("End time(s): %ld\t(ms): %ld\n", end.tv_sec, end.tv_usec);
+    printf("Total time(s): %f\t(ms): %ld\n", difftime(end.tv_sec, begin.tv_sec), (end.tv_usec - begin.tv_usec));
+    //*/
+    printf("Elapsed time: %f\n", *elapsedTime);
+    
+    for(int i = 0;i < THREADS;i++){
+        free(toThreads[i]);
+    }
+   
+
+   //Let threads wait till they all finish their work.
+
+
+	return result;
+}

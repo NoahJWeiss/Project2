@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#define THREADS 4
+#define THREADS 16
 
 #define filterWidth 3
 #define filterHeight 3
@@ -227,20 +227,19 @@ PPMPixel *readImage(const char *filename, unsigned long int *width, unsigned lon
 	return img;
 }
 
-void showPPM(PPMPixel *img)
-{
-    int i;
-    if(img){
+// void showPPM(PPMPixel *img)
+// {
+//     int i;
+//     if(img){
+//         for(i=-1;i<100;i++){
+//             printf("Number: %d\n",i);
+//             printf("R: %d ",img[i].r );
+//             printf("G: %d ",img[i].g );
+//             printf("B: %d\n ",img[i].b );
 
-    for(i=-1;i<100;i++){
-        printf("Number: %d\n",i);
-        printf("R: %d ",img[i].r );
-        printf("G: %d ",img[i].g );
-        printf("B: %d\n ",img[i].b );
-
-     }
-}
-}
+//         }
+//     }
+// }
 
 /* Create threads and apply filter to image.
  Each thread shall do an equal share of the work, i.e. work=height/number of threads.
@@ -253,6 +252,8 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
     PPMPixel *result;
     int totalPix = w * h;
     int indWork = totalPix / THREADS;
+
+    struct timeval begin, end;
     
     // printf("Total pixels: %i\n", totalPix);
 
@@ -263,6 +264,8 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
     result = (PPMPixel*) malloc(sizeof(PPMPixel) * w * h);
     // printf("result allocated\n");
     
+    gettimeofday(&begin, NULL);
+
     for(int i = 0; i < THREADS; i++){
         // Allocate memory for parameters (one for each thread)
         toThreads[i] = (struct parameter*) malloc(sizeof(struct parameter));
@@ -290,7 +293,17 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
     for (int i = 0; i < THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
+
+    gettimeofday(&end, NULL);
+
+    *elapsedTime = difftime(end.tv_sec, begin.tv_sec) + ((double)(end.tv_usec - begin.tv_usec)/ 1000000);
    
+    printf("Elapsed time: %f\n", *elapsedTime);
+
+    for(int i = 0;i < THREADS;i++){
+        free(toThreads[i]);
+    }
+
 	return result;
 }
 
